@@ -59,3 +59,27 @@ export const DELETE_IMAGES_QUERY = `
 export const DELETE_IMAGES_BY_PRODUCT_ID_QUERY = `
     DELETE FROM images WHERE product_id = ?;
 `;
+
+export const UPDATE_PRODUCT_FIELDS = `
+    UPDATE products 
+    SET title = ?, description = ?, price = ? 
+    WHERE product_id = ?
+`;
+
+export const SELECT_IMAGE_MAIN_BY_PRODUCT_ID_QUERY = `
+    SELECT * FROM images WHERE product_id=? AND main=?
+`;
+
+export const SELECT_IMAGE_BY_ID_AND_PRODUCT_ID_QUERY = `
+    SELECT * FROM images WHERE product_id=? AND image_id=?
+`;
+
+export const REPLACE_PRODUCT_THUMBNAIL = `
+    UPDATE images
+    SET main = CASE
+        WHEN image_id = ? THEN 0
+        WHEN image_id = ? THEN 1
+        ELSE main
+        END
+    WHERE image_id IN (?, ?);
+`;

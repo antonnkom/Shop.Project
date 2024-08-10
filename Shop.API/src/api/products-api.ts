@@ -22,8 +22,13 @@ import {
     DELETE_IMAGES_BY_PRODUCT_ID_QUERY,
     DELETE_COMMENT_BY_PRODUCT_ID_QUERY,
     DELETE_PRODUCT_QUERY,
-    DELETE_IMAGES_QUERY
+    DELETE_IMAGES_QUERY,
+    UPDATE_PRODUCT_FIELDS,
+    SELECT_IMAGE_MAIN_BY_PRODUCT_ID_QUERY,
+    SELECT_IMAGE_BY_ID_AND_PRODUCT_ID_QUERY,
+    REPLACE_PRODUCT_THUMBNAIL
 } from '../services/queries';
+import { IProduct } from "@Shared/types";
 
 export const productsRouter = Router();
 
@@ -131,9 +136,9 @@ productsRouter.post('/', async (req: Request<{}, {}, ProductCreatePayload>, res:
     }
 });
 
-productsRouter.delete('/id', async (req: Request<{ id: string }>, res: Response) => {
+productsRouter.delete('/:id', async (req: Request<{ id: string }>, res: Response) => {
     try {
-        const productId = req.body.product_id;
+        const productId = req.params.id;
         const [rows] = await connection.query<IProductEntity[]>(SELECT_PRODUCT_BY_ID_QUERY, productId);
 
         if (!rows?.[0]) {
@@ -178,7 +183,7 @@ productsRouter.post('/add-images', async (req: Request<{}, {}, ProductAddImagesP
     }
 });
 
-productsRouter.delete('/remove-images', async (req: Request<{}, {}, ImagesRemovePayload>, res: Response) => {
+productsRouter.post('/remove-images', async (req: Request<{}, {}, ImagesRemovePayload>, res: Response) => {
     try {
         const imagesToRemove = req.body;
 
@@ -202,5 +207,81 @@ productsRouter.delete('/remove-images', async (req: Request<{}, {}, ImagesRemove
     } catch(e) {
         throwServerError(res, e);
         return;
+    }
+});
+
+productsRouter.post('/update-thumbnail/:id', async (
+    req: Request<{ id: string }, {}, { newThumbnailId: string }>,
+    res: Response
+) => {
+    try {
+        const [currentThumbnailRows] = await connection.query<IProductImageEntity[]>(
+            SELECT_IMAGE_MAIN_BY_PRODUCT_ID_QUERY,
+            [req.params.id, 1]
+        );
+
+        if (!currentThumbnailRows?.length || currentThumbnailRows.length > 1) {
+            res.status(400);
+            res.send('Incorrect product id');
+            return;
+        }
+
+        const [newThumbnailRows] = await connection.query<IProductImageEntity[]>(
+            SELECT_IMAGE_BY_ID_AND_PRODUCT_ID_QUERY,
+            [req.params.id, req.body.newThumbnailId]
+        );
+
+        if (newThumbnailRows?.length !== 1) {
+            res.status(400);
+            res.send('Incorrect new thumbnail id');
+            return;
+        }
+
+        const currentThumbnailId = currentThumbnailRows[0].image_id;
+        const [info] = await connection.query<OkPacket>(
+            REPLACE_PRODUCT_THUMBNAIL,
+            [currentThumbnailId, req.body.newThumbnailId, currentThumbnailId, req.body.newThumbnailId]
+        );
+
+        if (info.affectedRows === 0) {
+            res.status(404);
+            res.send('No one image has been updated');
+            return;
+        }
+
+        res.status(200);
+        res.send('New product thumbnail has been set!');
+    } catch (e) {
+        throwServerError(res, e);
+    }
+});
+
+productsRouter.patch('/:id', async (req: Request<{ id: string }, {}, ProductCreatePayload>, res: Response) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await connection.query<IProductEntity[]>(SELECT_PRODUCT_BY_ID_QUERY, [id]);
+
+        if (!rows?.[0]) {
+            res.status(404);
+            res.send(`Product with id ${id} is not found`);
+            return;
+        }
+
+        const currentProduct = rows[0];
+
+        await connection.query<OkPacket>(
+            UPDATE_PRODUCT_FIELDS,
+            [
+                req.body.hasOwnProperty('title') ? req.body.title : currentProduct.title,
+                req.body.hasOwnProperty('description') ? req.body.description : currentProduct.description,
+                req.body.hasOwnProperty('price') ? req.body.price : currentProduct.price,
+                id
+            ]
+        );
+
+        res.status(200);
+        res.send(`Product id:${id} has been added!`);
+    } catch (e) {
+        throwServerError(res, e);
     }
 });

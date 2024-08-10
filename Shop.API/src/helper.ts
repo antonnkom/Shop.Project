@@ -3,7 +3,8 @@ import {
     CommentCreatePayload,
     ICommentEntity,
     IProductSearchFilter,
-    IProductImageEntity
+    IProductImageEntity,
+    ProductCreatePayload
 } from '../types';
 import { IProduct, IComment, IProductImage } from '@Shared/types';
 import { mapCommentEntity, mapImageEntity } from './services/mapping';
