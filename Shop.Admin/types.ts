@@ -1,3 +1,10 @@
+declare module 'express-session' {
+    export interface SessionData {
+        username?: string;
+        role?: string;
+    }
+}
+
 export interface IProductEditData {
     title: string;
     description: string;
@@ -6,4 +13,4 @@ export interface IProductEditData {
     newImages?: string;
     commentsToRemove: string | string[];
     imagesToRemove: string | string[];
-}
+};

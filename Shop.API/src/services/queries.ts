@@ -83,3 +83,7 @@ export const REPLACE_PRODUCT_THUMBNAIL = `
         END
     WHERE image_id IN (?, ?);
 `;
+
+export const SELECT_USER_QUERY = `
+    SELECT * FROM users WHERE login = ? AND password = ?
+`;

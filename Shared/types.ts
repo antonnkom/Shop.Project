@@ -29,3 +29,9 @@ export interface IProductFilterPayload {
     priceFrom?: number;
     priceTo?: number;
 };
+
+export interface IAuthRequisites {
+    username: string;
+    password: string;
+    role: string;
+};

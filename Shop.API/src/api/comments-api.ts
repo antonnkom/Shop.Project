@@ -1,12 +1,18 @@
 import { Request, Response, Router } from 'express';
-import { CommentCreatePayload, ICommentEntity } from '../../types';
+import { CommentCreatePayload, ICommentEntity, IProductEntity } from '../../types';
 import { IComment } from '@Shared/types';
 import { validateComment } from '../helper';
 import { connection } from '../../index';
 import { mapCommentsEntity } from '../services/mapping';
 import { v4 as uuidv4 } from 'uuid';
 import { OkPacket } from "mysql2";
-import { SELECT_COMMENT_BY_ID_QUERY, COMMENT_DUPLICATE_QUERY, INSERT_COMMENT_QUERY, DELETE_COMMENT_QUERY } from "../services/queries";
+import {
+    SELECT_COMMENT_BY_ID_QUERY,
+    COMMENT_DUPLICATE_QUERY,
+    INSERT_COMMENT_QUERY,
+    DELETE_COMMENT_QUERY,
+    SELECT_PRODUCT_BY_ID_QUERY
+} from "../services/queries";
 
 export const commentsRouter = Router();
 
@@ -65,6 +71,14 @@ commentsRouter.post('/', async (req: Request<{}, {}, CommentCreatePayload>, res:
 
     try {
         const { name, email, body, productId } = req.body;
+
+        const [product] = await connection.query <IProductEntity[]> (SELECT_PRODUCT_BY_ID_QUERY, [productId]);
+
+        if (!product.length) {
+            res.status(404);
+            res.send(`Product with id ${productId} is not found`);
+            return;
+        }
 
         const [sameResult] = await connection.query<ICommentEntity[]>(
             COMMENT_DUPLICATE_QUERY,
@@ -144,8 +158,15 @@ commentsRouter.delete('/:id', async (req: Request<{id: string}>, res: Response) 
     const id = req.params.id;
 
     try {
-        const query = await connection.query<ICommentEntity[]>(DELETE_COMMENT_QUERY, id);
+        const [comment] = await connection.query<ICommentEntity[]>(SELECT_COMMENT_BY_ID_QUERY, id);
         res.setHeader('Content-Type', 'aplication/json');
+        if (!comment.length) {
+            res.status(404);
+            res.send(`Comment with id ${id} is not found`);
+            return;
+        }
+
+        const query = await connection.query<ICommentEntity[]>(DELETE_COMMENT_QUERY, id);
         if (query) {
             res.send(`Comment with id ${id} deleted`);
             return;

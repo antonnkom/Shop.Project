@@ -10,7 +10,12 @@ import {
 } from '../../types';
 import { connection } from '../../index';
 import { mapProductsEntity, mapCommentsEntity, mapImagesEntity } from '../services/mapping';
-import { enhanceProductsComments, enhanceProductsImages, getProductsFilterQuery } from "../helper";
+import { 
+    enhanceProductsComments,
+    enhanceProductsImages,
+    getProductsFilterQuery,
+    throwServerError
+} from "../helper";
 import { v4 as uuidv4 } from 'uuid';
 import { OkPacket } from "mysql2";
 import {
@@ -28,15 +33,8 @@ import {
     SELECT_IMAGE_BY_ID_AND_PRODUCT_ID_QUERY,
     REPLACE_PRODUCT_THUMBNAIL
 } from '../services/queries';
-import { IProduct } from "@Shared/types";
 
 export const productsRouter = Router();
-
-const throwServerError = (res: Response, e: Error) => {
-    console.debug(e.message);
-    res.status(500);
-    res.send('Something went wrong');
-};
 
 productsRouter.get('/', async (req: Request, res: Response) => {
     try {
@@ -58,6 +56,12 @@ productsRouter.get('/', async (req: Request, res: Response) => {
 
 productsRouter.get('/search', async (req: Request<{}, {}, {}, IProductSearchFilter>, res: Response) => {
     try {
+        if (!Object.keys(req.query).length) {
+            res.status(400);
+            res.send('Filter is empty');
+            return;
+        }
+
         const [query, values] = getProductsFilterQuery(req.query);
         const [rows] = await connection.query <IProductEntity[]> (query, values);
 
@@ -117,6 +121,13 @@ productsRouter.post('/', async (req: Request<{}, {}, ProductCreatePayload>, res:
     try {
         const { title, description, price, images } = req.body;
         const productId = uuidv4();
+
+        if (!req.body.title || !req.body.price) {
+            res.status(400);
+            res.send(`title and price can't be empty`);
+            return;
+        }
+
         await connection.query <OkPacket> (
             INSERT_PRODUCT_QUERY,
             [productId, title || null, description || null, price || null]
@@ -164,6 +175,14 @@ productsRouter.delete('/:id', async (req: Request<{ id: string }>, res: Response
 productsRouter.post('/add-images', async (req: Request<{}, {}, ProductAddImagesPayload>, res: Response) => {
     try {
         const { productId, images } = req.body;
+
+        const [rows] = await connection.query <IProductEntity[]> (SELECT_PRODUCT_BY_ID_QUERY, [productId]);
+
+        if (!rows.length) {
+            res.status(404);
+            res.send(`Product with id ${productId} is not found`);
+            return;
+        }
 
         if (!images?.length) {
             res.status(400);

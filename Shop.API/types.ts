@@ -1,5 +1,5 @@
 import { RowDataPacket } from 'mysql2/index';
-import { IProduct, IComment, IProductImage, IProductFilterPayload } from '@Shared/types';
+import { IProduct, IComment, IProductImage, IProductFilterPayload, IAuthRequisites } from '@Shared/types';
 
 export interface ICommentEntity extends RowDataPacket {
     comment_id: string;
@@ -36,3 +36,7 @@ export interface ProductAddImagesPayload {
 };
 
 export type ImagesRemovePayload = string[];
+
+export interface IUserRequisitesEntity extends IAuthRequisites, RowDataPacket {
+    id: number;
+} 

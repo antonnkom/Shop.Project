@@ -9,6 +9,12 @@ export const initServer = (): Express => {
     const jsonMiddleware = express.json();
     app.use(jsonMiddleware);
 
+    app.use((req, res, next) => {
+        res.header('Access-Control-Allow-Origin', 'http://localhost:5000');
+        res.header('Access-Control-Allow-Headers', 'Content-Type');
+        next();
+    });
+
     app.listen(port, host, () => {
         console.log(`Server running on port ${port}`);
     });

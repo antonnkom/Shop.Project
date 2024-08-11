@@ -3,11 +3,11 @@ import {
     CommentCreatePayload,
     ICommentEntity,
     IProductSearchFilter,
-    IProductImageEntity,
-    ProductCreatePayload
+    IProductImageEntity
 } from '../types';
 import { IProduct, IComment, IProductImage } from '@Shared/types';
 import { mapCommentEntity, mapImageEntity } from './services/mapping';
+import { Response } from 'express';
 
 export const validateComment = (comment: CommentCreatePayload): CommentValidator => {
     if (Object.keys(comment).length === 0) {
@@ -59,7 +59,7 @@ export const getProductsFilterQuery = (filter: IProductSearchFilter): [string, s
 
     if (description) {
         if (values.length) {
-            query += " OR ";
+            query += " AND ";
         }
 
         query += 'description LIKE ? ';
@@ -68,7 +68,7 @@ export const getProductsFilterQuery = (filter: IProductSearchFilter): [string, s
 
     if (priceFrom || priceTo) {
         if (values.length) {
-            query += ' OR ';
+            query += ' AND ';
         }
 
         query += `(price > ? AND price < ?)`;
@@ -111,4 +111,10 @@ export const enhanceProductsImages = (products: IProduct[], imageRows: IProductI
     }
   
     return products;
-  }
+};
+
+export const throwServerError = (res: Response, e: Error) => {
+    console.debug(e.message);
+    res.status(500);
+    res.send('Something went wrong');
+};
