@@ -33,6 +33,7 @@ import {
     SELECT_IMAGE_BY_ID_AND_PRODUCT_ID_QUERY,
     REPLACE_PRODUCT_THUMBNAIL
 } from '../services/queries';
+import { param, body, validationResult } from 'express-validator';
 
 export const productsRouter = Router();
 
@@ -229,19 +230,32 @@ productsRouter.post('/remove-images', async (req: Request<{}, {}, ImagesRemovePa
     }
 });
 
-productsRouter.post('/update-thumbnail/:id', async (
-    req: Request<{ id: string }, {}, { newThumbnailId: string }>,
-    res: Response
-) => {
+productsRouter.post(
+    '/update-thumbnail/:id',
+    [
+        param('id').isUUID().withMessage('Product id is not UUID'),
+        body('newThumbnailId').isUUID().withMessage('Image id is not UUID'),
+    ],
+    async (
+        req: Request<{ id: string }, {}, { newThumbnailId: string }>,
+        res: Response
+    ) => {
     try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            res.status(400);
+            res.json({ errors: errors.array() });
+            return;
+        }
+
         const [currentThumbnailRows] = await connection.query<IProductImageEntity[]>(
             SELECT_IMAGE_MAIN_BY_PRODUCT_ID_QUERY,
             [req.params.id, 1]
         );
 
-        if (!currentThumbnailRows?.length || currentThumbnailRows.length > 1) {
-            res.status(400);
-            res.send('Incorrect product id');
+        if (!currentThumbnailRows.length) {
+            res.status(404);
+            res.send(`Product with ${req.params.id} is not found`);
             return;
         }
 
@@ -250,23 +264,17 @@ productsRouter.post('/update-thumbnail/:id', async (
             [req.params.id, req.body.newThumbnailId]
         );
 
-        if (newThumbnailRows?.length !== 1) {
-            res.status(400);
-            res.send('Incorrect new thumbnail id');
+        if (!newThumbnailRows.length) {
+            res.status(404);
+            res.send(`Image with ${req.body.newThumbnailId} is not found`);
             return;
         }
 
         const currentThumbnailId = currentThumbnailRows[0].image_id;
-        const [info] = await connection.query<OkPacket>(
+        await connection.query<OkPacket>(
             REPLACE_PRODUCT_THUMBNAIL,
             [currentThumbnailId, req.body.newThumbnailId, currentThumbnailId, req.body.newThumbnailId]
         );
-
-        if (info.affectedRows === 0) {
-            res.status(404);
-            res.send('No one image has been updated');
-            return;
-        }
 
         res.status(200);
         res.send('New product thumbnail has been set!');

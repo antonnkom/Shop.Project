@@ -13,6 +13,7 @@ import {
     DELETE_COMMENT_QUERY,
     SELECT_PRODUCT_BY_ID_QUERY
 } from "../services/queries";
+import { param, validationResult } from 'express-validator';
 
 export const commentsRouter = Router();
 
@@ -37,10 +38,23 @@ commentsRouter.get('/', async (req: Request, res: Response) => {
 });
 
 // search comment by id, task 28.5.1
-commentsRouter.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
+commentsRouter.get(
+    '/:id',
+    [
+        param('id').isUUID().withMessage('Comment id is not UUID')
+    ],
+    async (req: Request<{ id: string }>, res: Response
+) => {
     const id = req.params.id;
 
     try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            res.status(400);
+            res.json({ errors: errors.array() });
+            return;
+        }
+
         const [comments] = await connection.query<ICommentEntity[]>(SELECT_COMMENT_BY_ID_QUERY, id);
         res.setHeader('Content-Type', 'aplication/json');
         
