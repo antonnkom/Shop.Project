@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Server 5000 - Products request</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Server 5000 - Products request</h1>
+    <p>
+        <button id="button">Get products count</button>
+    </p>
+    <p>
+        Products count in DB: <span id="count">0</span>
+    </p>
+
+    <script>
+        document
+            .querySelector('#button')
+            .addEventListener('click', () => {
+                    fetch('http://localhost:3000/api/products')
+                        .then(response => response.json())
+                        .then(data => {
+                            document.querySelector('#count').innerText = `${data?.length || 0}`;
+                        })
+                        .catch(error => {
+                            console.log('Request error:\n', error);
+                        });
+                    });
+    </script>
+</body>
+
+</html>
